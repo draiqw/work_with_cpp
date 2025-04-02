@@ -26,12 +26,17 @@ template <typename T> class Matrix: public Matrix_Base <T> {
         T operator()(size_t i, size_t j = 0) const override {return data[i * this -> n_cols() + j];}
         T& operator()(size_t i, size_t j = 0) override {return data[i * this -> n_cols() + j];}
 
-        Matrix(const Matrix & other)
-            : Matrix_Base<T>{other.m_rows(), other.n_cols()} {
+        Matrix(const Matrix & other): Matrix_Base<T>
+        {
+            other.m_rows(),
+            other.n_cols(),
+        } {
             data = new T[other.m_rows() * other.n_cols()];
-            std::copy(other.data,
-                    other.data + this->m_rows() * this->n_cols(),
-                    data);
+            std::copy(
+                other.data,
+                other.data + this->m_rows() * this->n_cols(),
+                data
+            );
         }
 
         void print() override {
@@ -43,8 +48,28 @@ template <typename T> class Matrix: public Matrix_Base <T> {
             }
         }
 
+        // Move-конструктор
+        Matrix(Matrix&& other): Matrix_Base<T>{other.m_rows(),other.n_cols()}, data(other.data) {
+            std::cout << "MOVE _ KON" << std::endl;
+            other.data = nullptr;
+        }
+
+        // Move-оператор присваивания
+        Matrix& operator=(Matrix && other) noexcept {
+            if (this != &other) {
+                delete[] data;
+                data = other.data;
+                other.data = nullptr;
+            }
+            std::cout << "MOVE" << std::endl;
+            return *this;
+        }
+
         ~Matrix(){
+
+            std::cout << "MOVE_DIS" << std::endl;
             delete[] data;
+            std::cout << "MOVE_DIS_after" << std::endl;
         }
 
         template <typename U>
