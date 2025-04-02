@@ -22,21 +22,21 @@ struct AugmentedMatrix{
     AugmentedMatrix(const AugmentedMatrix &other) = delete;
     AugmentedMatrix& operator=(const AugmentedMatrix &other) = delete;
 
-    AugmentedMatrix(AugmentedMatrix &&other){
-        A = move(other.A);
-        B = move(other.B);
-        X = move(other.X);
-        Filename = move(other.Filename);
-    }
-    AugmentedMatrix& operator=(AugmentedMatrix &&other) {
-        if (this != &other) {
-            A = move(other.A);
-            B = move(other.B);
-            X = move(other.X);
-            Filename = move(other.Filename);
-        }
-        return *this;
-    }
+    // AugmentedMatrix(AugmentedMatrix &&other){
+    //     A = move(other.A);
+    //     B = move(other.B);
+    //     X = move(other.X);
+    //     Filename = move(other.Filename);
+    // }
+    // AugmentedMatrix& operator=(AugmentedMatrix &&other) {
+    //     if (this != &other) {
+    //         A = move(other.A);
+    //         B = move(other.B);
+    //         X = move(other.X);
+    //         Filename = move(other.Filename);
+    //     }
+    //     return *this;
+    // }
     
 };
 
@@ -79,7 +79,7 @@ AugmentedMatrix make_matrix(size_t m, size_t n){
     B(n-1, 0) = (double) (7 / (5 * (2 * (n - 1) +   1)));
     X(n-1, 0) = (double) (1 / (2 * (n - 1) + 1));
     AugmentedMatrix AM(A, B, X, "test.txt");
-    return AM;
+    // return AM;
 }   
 int main(){
     // cout << "Hello, World!" << endl;
