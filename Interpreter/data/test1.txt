@@ -1,0 +1,5 @@
+program {
+  int x;
+  x = 10 % 3;
+  if (x > 0) write("OK"); else write("NO");
+}

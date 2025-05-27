@@ -1,0 +1,15 @@
+program {
+    int i,j;
+    for (i = 0; i < 5; i += 1) {
+        for (j = 50; j < 55; j += 1) {
+            if (j == 52)
+                break;
+            write(i,j);
+        }
+        write("+");
+        if (i % 2 == 0)
+            continue;
+        write("*");
+    }
+    write("success");
+}

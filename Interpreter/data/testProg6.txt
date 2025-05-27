@@ -1,0 +1,15 @@
+program {
+    int i, j, k;
+    bool b;
+    string s, s1;
+    i = 0;
+    s = "cat";
+    read(s1);
+    write("=========");
+    while (i < 5){
+        s1 = s + s1;
+        write(s1);        
+        i += 1;
+    }
+        write(s1);
+}

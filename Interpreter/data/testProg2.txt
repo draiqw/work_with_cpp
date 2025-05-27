@@ -1,0 +1,12 @@
+program {
+	if (false) {
+		if (true) {
+			L1:
+			write("I was here");
+			goto L2;
+		}
+	}
+	goto L1;
+	L2:
+	write("success");
+}
