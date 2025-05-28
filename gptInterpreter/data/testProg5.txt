@@ -1,0 +1,9 @@
+program {
+	int i = 5,j = 6;
+	bool k;
+	write( k = (i == 5 && j == 6) == true );
+	write( k );
+	#k = ( i + 1.0 ) == 4;
+	k = (i + 1.0) < 4;
+	write(k);
+}

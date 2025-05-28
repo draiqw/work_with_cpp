@@ -1,125 +1,72 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-#include "lexer.h"
 #include <vector>
 #include <string>
 #include <unordered_map>
+#include "lexer.h"
+#include "ident.h"
+#include "executor.h"
 
-// Type enumeration for semantic analysis
-enum class ValueType { INT, REAL, BOOL, STRING, VOID };
+// Data type categories for expressions and variables
+enum DataType { D_NONE, D_INT, D_REAL, D_BOOL, D_STRING };
 
-// Symbol table entry for a variable
-struct VarInfo {
-    std::string name;
-    ValueType type;
-    // Runtime storage index (index in interpreter's memory vector)
-    size_t memIndex;
-};
-
-// Intermediate code instruction types
-enum class OpCode {
-    // Arithmetic and logical operations
-    ADD, SUB, MUL, DIV, MOD,
-    LT, LE, GT, GE, EQ, NE,        // comparisons
-    AND, OR, NOT,                 // logical ops
-    // Data operations
-    PUSH_INT, PUSH_REAL, PUSH_BOOL, PUSH_STRING,  // push constants
-    PUSH_VAR,                     // push variable value
-    PUSH_ADDR,                    // push address of variable (for assignment/read)
-    ASSIGN,                       // assign value to variable (pops address and value)
-    // Control flow
-    JMP,                          // unconditional jump
-    JMP_IF_FALSE,                 // jump if false (pop condition)
-    // I/O operations
-    READ, WRITE,                  // input and output
-    // No-op (used for placeholders or labels)
-    NOP
-};
-
-// Structure for an intermediate code instruction (POLIZ element)
-struct Instruction {
-    OpCode op;
-    // Operand fields (only one of these is used depending on op type)
-    int intValue;
-    double realValue;
-    bool boolValue;
-    std::string stringValue;
-    size_t index;   // index for variables (symbol table or jump target index)
-
-    Instruction(OpCode opc = OpCode::NOP) : op(opc), intValue(0), realValue(0.0), boolValue(false), index(0) {}
-};
-
-// Parser/semantic analyzer class
 class Parser {
+    Lexer &lexer;
+    Lex curr_lex;
+    LexType curr_type;
+    int curr_val;
+
+    std::vector<Lex> poliz;               // output POLIZ code
+    std::vector<Lex>* cur_poliz;          // pointer to current output vector (for handling sub-sequences)
+    
+    // Label handling: mapping from label name to its address in poliz, and unresolved jumps
+    std::unordered_map<std::string, int> label_map;
+    std::unordered_map<std::string, std::vector<int>> label_fixups;
+    
+    // Loop context stack (for break/continue handling)
+    struct LoopCtx {
+        int start_index;                 // index of loop start in poliz (for continue)
+        int continue_target;             // poliz index where a "continue" should jump (top of loop or loop's iteration code)
+        std::vector<int> break_positions;
+        std::vector<int> continue_positions;
+    };
+    std::vector<LoopCtx> loop_stack;
+
 public:
-    Parser(Lexer& lex): lexer(lex), errorFlag(false) {}
-
-    // Parse the entire program. Returns true if success, false if error.
-    bool parseProgram();
-
-    // Get the generated intermediate code and symbol table (for interpreter)
-    const std::vector<Instruction>& getCode() const { return code; }
-    const std::vector<VarInfo>& getSymbolTable() const { return variables; }
+    Parser(Lexer &lex): lexer(lex), cur_poliz(&poliz) {}
+    void analyze();                      // perform full parsing and POLIZ generation
+    const std::vector<Lex>& getPoliz() const { return poliz; }
 
 private:
-    Lexer& lexer;
-    Token currentToken;
-    bool errorFlag;
+    // Utility: read next lexeme into curr_lex, curr_type, curr_val
+    void gl() {
+        curr_lex = lexer.getLex();
+        curr_type = curr_lex.getType();
+        curr_val = curr_lex.getValue();
+    }
+    // Utility: emit a lexeme into current output (poliz)
+    void emit(const Lex &lex) {
+        cur_poliz->push_back(lex);
+    }
+    // Error reporting utility
+    [[noreturn]] void parseError(const std::string &msg) {
+        throw std::runtime_error("Syntax error: " + msg);
+    }
 
-    // Intermediate code (POLIZ) and symbol table
-    std::vector<Instruction> code;
-    std::vector<VarInfo> variables;
-    // Map for variable name -> symbol table index
-    std::unordered_map<std::string, size_t> varIndexMap;
-
-    // Label management for goto and loop/case control flow
-    struct LabelInfo { size_t index; bool defined; std::vector<size_t> patchLocations; };
-    std::unordered_map<std::string, LabelInfo> labelMap;
-
-    // Structures to manage break/continue targets in nested loops and switch-case
-    struct LoopContext { std::string breakLabel; std::string continueLabel; };
-    std::vector<LoopContext> loopStack;
-    struct SwitchContext { std::string breakLabel; };
-    std::vector<SwitchContext> switchStack;
-
-    // Parsing functions for each grammar construct
-    void advance();              // consume current token and move to next
-    void expect(TokenType expectedType);  // expect current token to be of a certain type or flag error
-
-    void parseDeclarations();
+    // Grammar parsing functions (recursive descent)
+    void parseProgram();
+    void parseBlock();
+    void parseDeclaration();
     void parseStatement();
-    void parseCompoundStatement();
-    void parseIfStatement();
-    void parseWhileStatement();
-    void parseDoWhileStatement();
-    void parseForStatement();
-    void parseCaseStatement();   // switch-case
-    void parseGotoStatement();
-    void parseReadStatement();
-    void parseWriteStatement();
-    void parseBreakStatement();
-    void parseContinueStatement();
-
-    // Expression parsing (recursive descent by precedence)
-    ValueType parseExpression();          // parse assignment expression (includes '=' operator)
-    ValueType parseLogicalOrExpression();
-    ValueType parseLogicalAndExpression();
-    ValueType parseEqualityExpression();
-    ValueType parseRelationalExpression();
-    ValueType parseAdditiveExpression();
-    ValueType parseMultiplicativeExpression();
-    ValueType parseUnaryExpression();
-    ValueType parsePrimaryExpression();
-
-    // Utility methods for semantic actions and code generation
-    size_t addVariable(const std::string& name, ValueType type);
-    size_t getVariableIndex(const std::string& name);
-    void emit(const Instruction& instr);                // append an instruction
-    void emitJump(OpCode op, size_t targetIndexPlaceholder); // emit jump with placeholder index
-    void backpatch(size_t instrIndex, size_t targetIndex);   // patch a jump target in code
-    // Error handling
-    void semanticError(const std::string& msg);
+    DataType parseExpression();
+    DataType parseOr();
+    DataType parseAnd();
+    DataType parseEquality();
+    DataType parseRelational();
+    DataType parseAdditive();
+    DataType parseTerm();
+    DataType parseFactor();
 };
 
-#endif // PARSER_H
+#endif

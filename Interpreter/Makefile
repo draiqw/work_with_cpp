@@ -1,42 +1,35 @@
-# ---------- конфигурация ----------
-CXX       := g++
-CXXFLAGS := -std=c++11 -Wall -Wextra -g -MMD -MP -Wno-unused-variable
-INCLUDES  := -I include
+CXX = g++
+CXXFLAGS = -std=c++17 -O2 -Wall
 
-CXXFLAGS += -Wno-unused-variable
+SRC_DIR = src
+OBJ_DIR = build
+BIN_DIR = bin
 
-SRC_DIR   := src
-BUILD_DIR := build
-BIN_DIR   := bin
-TARGET    := $(BIN_DIR)/interpreter
+SRCS = $(wildcard $(SRC_DIR)/*.cpp)
+OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRCS))
+DEPS = $(wildcard include/*.h)
 
-# ---------- файлы ------------------
-SRCS := $(wildcard $(SRC_DIR)/*.cpp)
-OBJS := $(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(SRCS))
+TARGET = $(BIN_DIR)/interpreter
 
-# ---------- правила ----------------
-$(TARGET): $(OBJS) | $(BIN_DIR)
-	@echo "Linking $@"
-	$(CXX) $(CXXFLAGS) $(OBJS) -o $@
+$(TARGET): $(OBJS)
+	@mkdir -p $(BIN_DIR)
+	$(CXX) $(CXXFLAGS) -o $@ $(OBJS)
 
-# «%.o» зависит только от своего .cpp
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp | $(BUILD_DIR)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
-
--include $(OBJS:.o=.d)
-
-$(BUILD_DIR) $(BIN_DIR):
-	@mkdir -p $@
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp $(DEPS)
+	@mkdir -p $(OBJ_DIR)
+	$(CXX) $(CXXFLAGS) -Iinclude -c $< -o $@
 
 run: $(TARGET)
-	$(TARGET) $(PROGRAM)
+	$(TARGET)
 
 test: $(TARGET)
-	@echo
-	@echo "Running all test programs in data/..."
-	@cd test && ./run_tests.sh
+	@for f in data/testProg*.txt; do \
+		echo "Running $$f:"; \
+		$(TARGET) $$f; \
+		echo "----"; \
+	done
 
 clean:
-	rm -rf $(BUILD_DIR) $(BIN_DIR)
+	$(RM) -r $(OBJ_DIR) $(BIN_DIR)
 
 .PHONY: run test clean

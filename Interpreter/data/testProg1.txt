@@ -1,0 +1,14 @@
+
+
+program {
+	int k=5,m=7;
+	real l=6.0;
+
+	k += m+l;
+	write(k);
+	if (k < 100)
+		goto P;
+	write("success");
+L:
+	write("okey");
+}

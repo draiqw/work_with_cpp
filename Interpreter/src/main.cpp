@@ -1,32 +1,32 @@
+#include <iostream>
 #include <fstream>
+#include <string>
 #include "lexer.h"
 #include "parser.h"
-#include "interpreter.h"
+#include "executor.h"
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        std::cerr << "Usage: interpreter <source_file>\n";
+        std::cerr << "Usage: " << argv[0] << " <program_file>" << std::endl;
         return 1;
     }
-    const char* filename = argv[1];
-    std::ifstream infile(filename);
-    if (!infile) {
-        std::cerr << "Error: Cannot open file " << filename << "\n";
+    std::ifstream fin(argv[1]);
+    if (!fin.is_open()) {
+        std::cerr << "Error: cannot open file " << argv[1] << std::endl;
         return 1;
     }
-    // Create Lexer and Parser
-    Lexer lexer(infile);
-    Parser parser(lexer);
-    // Parse the program
-    if (!parser.parseProgram()) {
-        std::cerr << "Parsing failed. Exiting.\n";
+    // Read the entire program file into a string
+    std::string text((std::istreambuf_iterator<char>(fin)), std::istreambuf_iterator<char>());
+    fin.close();
+    try {
+        Lexer lexer(text);
+        Parser parser(lexer);
+        parser.analyze();                   // perform lexical and syntax analysis, build POLIZ
+        Executer executer;
+        executer.execute(parser.getPoliz()); // execute the POLIZ program
+    } catch (const std::exception &e) {
+        std::cerr << e.what() << std::endl;
         return 1;
     }
-    // Get the generated code and symbol table
-    const std::vector<Instruction>& code = parser.getCode();
-    const std::vector<VarInfo>& vars = parser.getSymbolTable();
-    // Run the interpreter on the generated code
-    Interpreter interpreter(code, vars);
-    interpreter.run();
     return 0;
 }
